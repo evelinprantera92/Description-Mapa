@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INFUETUR · Mapa interactivo</title>
+<style>
+:root{color-scheme:dark;--bg:#11151d;--panel:#1a202b;--line:#364254;--text:#edf2f8;--muted:#aab6c6;--accent:#83c5be}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.topbar{position:fixed;z-index:10;left:12px;right:12px;top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:#1a202beF;border:1px solid #394354;border-radius:14px;box-shadow:0 8px 28px #0005;backdrop-filter:blur(12px)}
+.brand{font-weight:750;letter-spacing:.2px;margin-right:auto}.brand small{display:block;color:var(--muted);font-weight:450;font-size:11px;margin-top:2px}
+button{border:1px solid #445064;background:#252e3c;color:var(--text);padding:8px 11px;border-radius:9px;cursor:pointer;font-size:13px}button:hover{background:#344155}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#zoomLabel{min-width:48px;text-align:center;font-size:12px;color:var(--muted)}
+#viewport{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab;background-image:radial-gradient(#303a49 1px,transparent 1px);background-size:24px 24px}
+#viewport.dragging{cursor:grabbing}#world{position:absolute;left:0;top:0;transform-origin:0 0}
+#edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.node{position:absolute;display:flex;align-items:center;justify-content:center;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px 14px;border:1px solid #637187;border-radius:11px;background:#202938;color:#eaf0f8;font-size:14px;line-height:1.42;box-shadow:0 5px 14px #0003;cursor:pointer;user-select:none;overflow:auto}
+.node.heading{font-weight:650;background:#293647;border-color:#74879d}
+.node.important{background:#392b31;border-color:#a86670}
+.node.selected{outline:3px solid var(--accent);outline-offset:3px;box-shadow:0 0 0 5px #83c5be22,0 8px 24px #0006}
+.edge{fill:none;stroke:#8190a4;stroke-width:2.1;opacity:.78;vector-effect:non-scaling-stroke}
+.edge.problem{stroke:#b85e65;stroke-width:2.6}
+.edge-label{fill:#f1a4a9;font-size:13px;font-weight:700;letter-spacing:1px}
+#info{position:fixed;z-index:9;right:12px;bottom:12px;width:min(340px,calc(100vw - 24px));padding:13px 15px;border:1px solid #394354;border-radius:13px;background:#1a202bf2;box-shadow:0 8px 28px #0005;display:none}
+#info.show{display:block}#info h2{font-size:14px;margin:0 0 6px}#info p{font-size:12px;color:var(--muted);margin:0;line-height:1.45}
+.hint{position:fixed;left:14px;bottom:12px;color:#b5c0cf;background:#1a202bd9;border:1px solid #394354;border-radius:10px;padding:8px 10px;font-size:11px;pointer-events:none}
+@media(max-width:600px){.topbar{left:8px;right:8px;top:8px;gap:6px;padding:8px}.brand{width:100%;font-size:14px}.brand small{display:none}button{padding:8px 9px;font-size:12px}.hint{bottom:8px;left:8px;font-size:10px}.node{font-size:13px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">INFUETUR · Mapa de causas y efectos<small>Canvas interactivo · arrastrá, acercá y seleccioná bloques</small></div>
+  <button id="zoomOut" aria-label="Alejar">−</button><span id="zoomLabel">100%</span><button id="zoomIn" aria-label="Acercar">+</button>
+  <button id="fit">Ver todo</button><button id="reset">Centrar</button>
+</header>
+<main id="viewport" aria-label="Lienzo interactivo">
+  <div id="world"><svg id="edges"></svg><div id="nodes"></div></div>
+</main>
+<aside id="info"><h2 id="infoTitle">Bloque seleccionado</h2><p id="infoText">Seleccioná otro bloque para ver su contenido.</p></aside>
+<div class="hint">Arrastrá para moverte · rueda o +/− para zoom · tocá un bloque para seleccionarlo</div>
+<script>
+const DATA = {"nodes": [{"id": "26775786c3b59638", "type": "text", "text": "E1:  (Dificultades para localizar, vincular y actualizar la documentación)", "x": -1283, "y": -426, "width": 635, "height": 50, "color": "4"}, {"id": "214c78dfb2b8d6ce", "type": "text", "text": "**CAUSAS** (Origen del problema)", "x": -431, "y": -226, "width": 283, "height": 50, "color": "3"}, {"id": "5180ded1cf3f7fe2", "type": "text", "text": "**EFECTOS** (Consecuencias del problema)", "x": -456, "y": -401, "width": 334, "height": 50, "color": "4"}, {"id": "d57b22670f758bab", "type": "text", "text": "C1.1 Implementación del servicio Google Drive \n(Implementación sist. digital insufiiente y desprotegido )", "x": -1462, "y": 59, "width": 444, "height": 67, "color": "3"}, {"id": "4eb9d32ea511413b", "type": "text", "text": "* Coexistencia de legajos físicos y digitales.\n* Riesgos vinculados con el acceso, la pérdida o la eliminación de archivos.\n* Dependencia de usuarios particulares para administrar los archivos.\n* Dificultades de vinculación y seguimiento", "x": -1382, "y": 126, "width": 608, "height": 138, "color": "3"}, {"id": "2e67edd160206487", "type": "text", "text": "C1.2 Estructura documental no estandarizada \n(Falta de integración e interoperabilidad)", "x": -1471, "y": 320, "width": 415, "height": 60, "color": "3"}, {"id": "5a4b0e24ce013a9c", "type": "text", "text": "* Reiteración de documentación para nuevas habilitaciones a un mismo prestador.\n* Documental heterogéneos: distintas formas de crear, nombrar y, clasificar archivos\n* Inexistencia de copias de seguridad o respaldos de los expedientes en papel.", "x": -1426, "y": 380, "width": 697, "height": 113, "color": "3"}, {"id": "819e05b5c90c431c", "type": "text", "text": "C1: Técnologica y Seguridad", "x": -1471, "y": -78, "width": 377, "height": 50, "color": "3"}, {"id": "4ca30ef2ad26d325", "type": "text", "text": "C2.1 Preeminencia del soporte analogico", "x": -562, "y": 112, "width": 379, "height": 50, "color": "3"}, {"id": "8eb9210b24e8829c", "type": "text", "text": "C2: Infraestructura Física y Procesos", "x": -545, "y": 4, "width": 307, "height": 50, "color": "3"}, {"id": "83d18b83a0af63d0", "type": "text", "text": "C2.2 Dependencia de tareas manuales:", "x": -466, "y": 296, "width": 324, "height": 50, "color": "3"}, {"id": "500d5e8df0b78eed", "type": "text", "text": "* Crecimiento constante del archivo fisico\n* Deposito fisico limitado (mas de 10m de ancho por 2m de alto)*", "x": -503, "y": 173, "width": 529, "height": 71, "color": "3"}, {"id": "bdd79b25b5dddd28", "type": "text", "text": "* Ausencia de automatización administrativa.\n* Dependencia del conocimiento operativo del personal.\n* Repetición de tareas.\n* Escasez de datos estadísticos consolidados.", "x": -429, "y": 372, "width": 492, "height": 121, "color": "3"}, {"id": "80d4068b33ba2625", "type": "text", "text": "C3 Estructural y Financiero", "x": 225, "y": -34, "width": 330, "height": 50, "color": "3"}, {"id": "c142fe69aef0692c", "type": "text", "text": "C3.1Fragmentación técnica", "x": 329, "y": 71, "width": 324, "height": 50, "color": "3"}, {"id": "c8aa7702a15033bf", "type": "text", "text": "C3.2 Invisibilización institucional del conflicto", "x": 366, "y": 251, "width": 373, "height": 50, "color": "3"}, {"id": "232f16b65d01f27e", "type": "text", "text": "* Departamentos unipersonales.\n* Deficit financiero / Recursos limitados", "x": 369, "y": 140, "width": 373, "height": 59, "color": "3"}, {"id": "512667eb3642bc5f", "type": "text", "text": "* Ausencia de registros de reclamos.\n* Baja formalización de reclamos por parte de los usuarios prestadores.", "x": 403, "y": 320, "width": 407, "height": 103, "color": "3"}, {"id": "96cc4290d0416a14", "type": "text", "text": "* Desconocimiento del estado real de los tramites.", "x": -238, "y": -729, "width": 413, "height": 50, "color": "4"}, {"id": "a9413eb833c53c61", "type": "text", "text": "E3 Vulnerabilidad ante ausencias1\n- Dificultades para distribuir tareas y compartir conocimientos especializados.\n- ", "x": 653, "y": -615, "width": 250, "height": 60, "color": "4"}], "edges": [{"id": "25d2ff20057d8346", "fromNode": "214c78dfb2b8d6ce", "fromSide": "bottom", "toNode": "819e05b5c90c431c", "toSide": "top"}, {"id": "0ff4a705cebb28e5", "fromNode": "819e05b5c90c431c", "fromSide": "left", "toNode": "d57b22670f758bab", "toSide": "left"}, {"id": "45e82d377fb39980", "fromNode": "d57b22670f758bab", "fromSide": "left", "toNode": "4eb9d32ea511413b", "toSide": "left"}, {"id": "c40b0bfcda34aab3", "fromNode": "819e05b5c90c431c", "fromSide": "left", "toNode": "2e67edd160206487", "toSide": "left"}, {"id": "399fe65f8a0b4215", "fromNode": "2e67edd160206487", "fromSide": "left", "toNode": "5a4b0e24ce013a9c", "toSide": "left"}, {"id": "4c1576361d6c6b01", "fromNode": "214c78dfb2b8d6ce", "fromSide": "bottom", "toNode": "8eb9210b24e8829c", "toSide": "top"}, {"id": "52b6c163c6bf683c", "fromNode": "8eb9210b24e8829c", "fromSide": "left", "toNode": "4ca30ef2ad26d325", "toSide": "left"}, {"id": "e25f002b2bdd9564", "fromNode": "4ca30ef2ad26d325", "fromSide": "left", "toNode": "500d5e8df0b78eed", "toSide": "left"}, {"id": "64b005477e4f40ac", "fromNode": "83d18b83a0af63d0", "fromSide": "left", "toNode": "bdd79b25b5dddd28", "toSide": "left"}, {"id": "e7d4a0b9b648fd35", "fromNode": "8eb9210b24e8829c", "fromSide": "left", "toNode": "83d18b83a0af63d0", "toSide": "left"}, {"id": "0d4e2db277252c94", "fromNode": "214c78dfb2b8d6ce", "fromSide": "bottom", "toNode": "80d4068b33ba2625", "toSide": "top"}, {"id": "b851ba3fed30511b", "fromNode": "c142fe69aef0692c", "fromSide": "left", "toNode": "232f16b65d01f27e", "toSide": "left"}, {"id": "5ff9e70ad0e66ef9", "fromNode": "c8aa7702a15033bf", "fromSide": "left", "toNode": "512667eb3642bc5f", "toSide": "left"}, {"id": "263f22fa22502638", "fromNode": "80d4068b33ba2625", "fromSide": "left", "toNode": "c142fe69aef0692c", "toSide": "left"}, {"id": "9326e44b5eeb46da", "fromNode": "80d4068b33ba2625", "fromSide": "left", "toNode": "c8aa7702a15033bf", "toSide": "left"}, {"id": "3f331a0f0e85ae24", "fromNode": "bdd79b25b5dddd28", "fromSide": "right", "toNode": "96cc4290d0416a14", "toSide": "bottom"}, {"id": "393a81bdc84509c8", "fromNode": "819e05b5c90c431c", "fromSide": "top", "toNode": "26775786c3b59638", "toSide": "bottom"}, {"id": "d1137a08cdafab20", "fromNode": "232f16b65d01f27e", "fromSide": "right", "toNode": "a9413eb833c53c61", "toSide": "bottom"}, {"id": "b5e13fb798e88304", "fromNode": "214c78dfb2b8d6ce", "fromSide": "top", "toNode": "5180ded1cf3f7fe2", "toSide": "bottom", "color": "#720808", "label": "PROBLEMA"}]};
+const viewport=document.getElementById('viewport'), world=document.getElementById('world');
+const nodesRoot=document.getElementById('nodes'), svg=document.getElementById('edges');
+const zoomLabel=document.getElementById('zoomLabel'), info=document.getElementById('info');
+let scale=1, tx=0, ty=0, dragging=false, startX=0, startY=0, baseX=0, baseY=0;
+const byId=new Map(DATA.nodes.map(n=>[n.id,n]));
+const minX=Math.min(...DATA.nodes.map(n=>n.x)), minY=Math.min(...DATA.nodes.map(n=>n.y));
+const maxX=Math.max(...DATA.nodes.map(n=>n.x+n.width)), maxY=Math.max(...DATA.nodes.map(n=>n.y+n.height));
+const pad=90, W=maxX-minX+pad*2, H=maxY-minY+pad*2;
+const ox=-minX+pad, oy=-minY+pad;
+world.style.width=W+'px'; world.style.height=H+'px';
+svg.setAttribute('width',W);svg.setAttribute('height',H);svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+function textFromMarkdown(s){return (s||'').replace(/\*\*(.*?)\*\*/g,'$1').replace(/^\*\s/gm,'• ').replace(/^\-\s/gm,'– ')}
+function pos(n){return {x:n.x+ox,y:n.y+oy,w:n.width,h:n.height}}
+function anchor(n,side){const p=pos(n);switch(side){case'top':return{x:p.x+p.w/2,y:p.y};case'bottom':return{x:p.x+p.w/2,y:p.y+p.h};case'left':return{x:p.x,y:p.y+p.h/2};default:return{x:p.x+p.w,y:p.y+p.h/2}}}
+for(const n of DATA.nodes){
+ const p=pos(n),el=document.createElement('div');
+ el.className='node';
+ if(/CAUSAS|EFECTOS/.test(n.text))el.classList.add('heading');
+ if(n.color==='4')el.classList.add('important');
+ el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.width=p.w+'px';el.style.height=p.h+'px';
+ el.textContent=textFromMarkdown(n.text);el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label',textFromMarkdown(n.text));
+ el.addEventListener('click',e=>{e.stopPropagation();selectNode(n,el)});
+ el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectNode(n,el)}});
+ nodesRoot.appendChild(el);n._el=el;
+}
+function pathFor(a,b,as,bs){
+ const p1=anchor(a,as),p2=anchor(b,bs);
+ if(as==='left'||as==='right'||bs==='left'||bs==='right'){
+  let bend=(p1.x+p2.x)/2;
+  if(Math.abs(p2.x-p1.x)<100)bend=p1.x+(as==='left'?-55:55);
+  return `M ${p1.x} ${p1.y} C ${bend} ${p1.y}, ${bend} ${p2.y}, ${p2.x} ${p2.y}`;
+ }
+ const bend=(p1.y+p2.y)/2;
+ return `M ${p1.x} ${p1.y} C ${p1.x} ${bend}, ${p2.x} ${bend}, ${p2.x} ${p2.y}`;
+}
+const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+defs.innerHTML='<marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#8190a4"/></marker><marker id="arrowRed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#b85e65"/></marker>';svg.appendChild(defs);
+for(const e of DATA.edges){
+ const a=byId.get(e.fromNode),b=byId.get(e.toNode);if(!a||!b)continue;
+ const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+ path.setAttribute('d',pathFor(a,b,e.fromSide,e.toSide));path.setAttribute('class','edge'+(e.label?' problem':''));
+ path.setAttribute('marker-end',e.label?'url(#arrowRed)':'url(#arrow)');svg.appendChild(path);
+ if(e.label){const label=document.createElementNS('http://www.w3.org/2000/svg','text');label.setAttribute('x',(anchor(a,e.fromSide).x+anchor(b,e.toSide).x)/2);label.setAttribute('y',(anchor(a,e.fromSide).y+anchor(b,e.toSide).y)/2-10);label.setAttribute('class','edge-label');label.setAttribute('text-anchor','middle');label.textContent=e.label;svg.appendChild(label)}
+}
+function apply(){world.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;zoomLabel.textContent=Math.round(scale*100)+'%'}
+function zoomAt(factor,cx=viewport.clientWidth/2,cy=viewport.clientHeight/2){const old=scale;scale=Math.max(.18,Math.min(2.5,scale*factor));tx=cx-(cx-tx)*(scale/old);ty=cy-(cy-ty)*(scale/old);apply()}
+function fit(){const s=Math.min((viewport.clientWidth-50)/W,(viewport.clientHeight-130)/H,1);scale=Math.max(.18,s);tx=(viewport.clientWidth-W*scale)/2;ty=(viewport.clientHeight-H*scale)/2;apply()}
+function selectNode(n,el){document.querySelectorAll('.node.selected').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');document.getElementById('infoTitle').textContent=textFromMarkdown(n.text).split('\n')[0].slice(0,100);document.getElementById('infoText').textContent=textFromMarkdown(n.text);info.classList.add('show')}
+document.getElementById('zoomIn').onclick=()=>zoomAt(1.2);document.getElementById('zoomOut').onclick=()=>zoomAt(1/1.2);document.getElementById('fit').onclick=fit;document.getElementById('reset').onclick=()=>{scale=1;tx=viewport.clientWidth/2-W/2;ty=viewport.clientHeight/2-H/2;apply()};
+viewport.addEventListener('pointerdown',e=>{if(e.target.closest('.node'))return;dragging=true;viewport.classList.add('dragging');startX=e.clientX;startY=e.clientY;baseX=tx;baseY=ty;viewport.setPointerCapture(e.pointerId)});
+viewport.addEventListener('pointermove',e=>{if(!dragging)return;tx=baseX+e.clientX-startX;ty=baseY+e.clientY-startY;apply()});
+function endDrag(){dragging=false;viewport.classList.remove('dragging')}
+viewport.addEventListener('pointerup',endDrag);viewport.addEventListener('pointercancel',endDrag);
+viewport.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.deltaY<0?1.1:1/1.1,e.clientX,e.clientY)},{passive:false});
+viewport.addEventListener('click',e=>{if(e.target===viewport)info.classList.remove('show')});
+window.addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>
